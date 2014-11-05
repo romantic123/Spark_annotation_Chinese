@@ -462,7 +462,7 @@ class SparkContext(config: SparkConf) extends Logging {
     new ParallelCollectionRDD[T](this, seq.map(_._1), seq.size, indexToPrefs)
   }
 
-  /**
+  /***
    * Read a text file from HDFS, a local file system (available on all nodes), or any
    * Hadoop-supported file system URI, and return it as an RDD of Strings.
    * 从HDFS,本地文件系统读取text文件,返回一个RDD
