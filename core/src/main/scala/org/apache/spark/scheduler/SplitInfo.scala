@@ -20,9 +20,8 @@ package org.apache.spark.scheduler
 import collection.mutable.ArrayBuffer
 
 import org.apache.spark.annotation.DeveloperApi
-
-// information about a specific split instance : handles both split instances.
-// So that we do not need to worry about the differences.
+//关于划分实例的一些信息:handles both split instances.
+//所以我们不必担心差异
 @DeveloperApi
 class SplitInfo(
     val inputFormatClazz: Class[_],

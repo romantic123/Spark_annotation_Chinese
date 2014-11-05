@@ -24,9 +24,12 @@ import org.apache.spark.metrics.source.Source
 
 private[spark] class BlockManagerSource(val blockManager: BlockManager, sc: SparkContext)
     extends Source {
+  /**metric是一个指标度量工具,MetricRegistry是他的中心部件,他是程序中所有度量Metric的容器,维护一个Map*/
   override val metricRegistry = new MetricRegistry()
   override val sourceName = "%s.BlockManager".format(sc.appName)
 
+
+  /**register代表的意思是注册到容器中,Guage代表一个度量的即时值,*/
   metricRegistry.register(MetricRegistry.name("memory", "maxMem_MB"), new Gauge[Long] {
     override def getValue: Long = {
       val storageStatusList = blockManager.master.getStorageStatus

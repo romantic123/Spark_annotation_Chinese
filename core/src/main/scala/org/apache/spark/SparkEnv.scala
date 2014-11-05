@@ -40,14 +40,15 @@ import org.apache.spark.util.{AkkaUtils, Utils}
 
 /**
  * :: DeveloperApi ::
- * Holds all the runtime environment objects for a running Spark instance (either master or worker),
- * including the serializer, Akka actor system, block manager, map output tracker, etc. Currently
- * Spark code finds the SparkEnv through a thread-local variable, so each thread that accesses these
- * objects needs to have the right SparkEnv set. You can get the current environment with
- * SparkEnv.get (e.g. after creating a SparkContext) and set it with SparkEnv.set.
  *
- * NOTE: This is not intended for external use. This is exposed for Shark and may be made private
- *       in a future release.
+ * 一个拥有所有spark运行实例(master或者worker)的运行环境对象.
+ * 包括:serializer(序列化器),Akka actor system,block manager,map output tracker等等.
+ *目前,Spark是通过本地线程池变量来找到SparkEnv的,所以每个线程访问这些对象需要正确的SparkEnv集合.
+ * 你可以使用SparkEnv.get(e.g. after creating a SparkContext)得到当前运行环境,并且使用SparkEnv.set.来进行设置
+ *
+ * 注意:这不意味着你可以随意使用,在未来的版本中,会将其私有化.
+ *
+ *
  */
 @DeveloperApi
 class SparkEnv (
@@ -71,7 +72,7 @@ class SparkEnv (
   private val pythonWorkers = mutable.HashMap[(String, Map[String, String]), PythonWorkerFactory]()
 
   // A general, soft-reference map for metadata needed during HadoopRDD split computation
-  // (e.g., HadoopFileRDD uses this to cache JobConfs and InputFormats).
+  //例如:HadoopFileRDD使用这个方法来缓存JobConfs和InputFormats
   private[spark] val hadoopJobMetadata = new MapMaker().softValues().makeMap[String, Any]()
 
   private[spark] def stop() {
@@ -84,8 +85,7 @@ class SparkEnv (
     blockManager.master.stop()
     metricsSystem.stop()
     actorSystem.shutdown()
-    // Unfortunately Akka's awaitTermination doesn't actually wait for the Netty server to shut
-    // down, but let's call it anyway in case it gets fixed in a later release
+    //不幸的是,Akka的awaitTermination并不会等待Netty服务的关闭,这个问题需要等到之后的版本进行修正
     // UPDATE: In Akka 2.1.x, this hangs if there are remote actors, so we can't call it.
     // actorSystem.awaitTermination()
   }
@@ -120,15 +120,14 @@ object SparkEnv extends Logging {
   }
 
   /**
-   * Returns the ThreadLocal SparkEnv, if non-null. Else returns the SparkEnv
-   * previously set in any thread.
+   * 如果非空,返回SparkEnv的本地线程.否则返回在其他线程设置的SparkEnv
    */
   def get: SparkEnv = {
     Option(env.get()).getOrElse(lastSetSparkEnv)
   }
 
   /**
-   * Returns the ThreadLocal SparkEnv.
+   * 返回SparkEnv的本地线程
    */
   def getThreadLocal: SparkEnv = {
     env.get()
@@ -143,7 +142,7 @@ object SparkEnv extends Logging {
       isLocal: Boolean,
       listenerBus: LiveListenerBus = null): SparkEnv = {
 
-    // Listener bus is only used on the driver
+    //Listener bus仅用于driver
     if (isDriver) {
       assert(listenerBus != null, "Attempted to create driver SparkEnv with null listener bus!")
     }
@@ -153,17 +152,19 @@ object SparkEnv extends Logging {
     val (actorSystem, boundPort) = AkkaUtils.createActorSystem(
       actorSystemName, hostname, port, conf, securityManager)
 
-    // Figure out which port Akka actually bound to in case the original port is 0 or occupied.
-    // This is so that we tell the executors the correct port to connect to.
+
+    //列出来Akka实际绑定的端口,防止原始的端口被占用,或者没设置
+    //以便于告诉executors正确的连接端口
     if (isDriver) {
       conf.set("spark.driver.port", boundPort.toString)
     }
 
-    // Create an instance of the class with the given name, possibly initializing it with our conf
+    //创建一个给定名字的类的实例,可能会使用我们的conf进行初始化
     def instantiateClass[T](className: String): T = {
       val cls = Class.forName(className, true, Utils.getContextOrSparkClassLoader)
-      // Look for a constructor taking a SparkConf and a boolean isDriver, then one taking just
-      // SparkConf, then one taking no arguments
+      //寻找一个有两个参数的构造函数:SparkConf和boolean SparkConf的
+      //另外一个是只有SparkConf
+      //还有一个是没有参数
       try {
         cls.getConstructor(classOf[SparkConf], java.lang.Boolean.TYPE)
           .newInstance(conf, new java.lang.Boolean(isDriver))
@@ -179,8 +180,8 @@ object SparkEnv extends Logging {
       }
     }
 
-    // Create an instance of the class named by the given SparkConf property, or defaultClassName
-    // if the property is not set, possibly initializing it with our conf
+    //通过给定的SparkConf property或者默认的类名称,来创建一个类的实例
+    //如果给定的property没有设置,使用我们的conf来进行初始化.
     def instantiateClassFromConf[T](propertyName: String, defaultClassName: String): T = {
       instantiateClass[T](conf.get(propertyName, defaultClassName))
     }
@@ -207,8 +208,8 @@ object SparkEnv extends Logging {
       new MapOutputTrackerWorker(conf)
     }
 
-    // Have to assign trackerActor after initialization as MapOutputTrackerActor
     // requires the MapOutputTracker itself
+    //在初始化MapOutputTrackerActor后,必须分配trackerActor
     mapOutputTracker.trackerActor = registerOrLookup(
       "MapOutputTracker",
       new MapOutputTrackerMasterActor(mapOutputTracker.asInstanceOf[MapOutputTrackerMaster], conf))
@@ -254,9 +255,7 @@ object SparkEnv extends Logging {
     }
     metricsSystem.start()
 
-    // Set the sparkFiles directory, used when downloading dependencies.  In local mode,
-    // this is a temporary directory; in distributed mode, this is the executor's current working
-    // directory.
+    //设置sparkFile文件目录,当下载依赖的时候会用.在本地模式下,这是一个临时目录.在分布式模式下,这是executor的工作目录
     val sparkFilesDir: String = if (isDriver) {
       Utils.createTempDir().getAbsolutePath
     } else {
@@ -289,9 +288,10 @@ object SparkEnv extends Logging {
   }
 
   /**
-   * Return a map representation of jvm information, Spark properties, system properties, and
-   * class paths. Map keys define the category, and map values represent the corresponding
-   * attributes as a sequence of KV pairs. This is used mainly for SparkListenerEnvironmentUpdate.
+   * 返回一个表示JVM信息,Spark属性,系统属性和类路径的map.
+   * map的key是定义的目录,map的value是一系列的属性.
+   * 主要被SparkListenerEnvironmentUpdate使用
+   *
    */
   private[spark]
   def environmentDetails(

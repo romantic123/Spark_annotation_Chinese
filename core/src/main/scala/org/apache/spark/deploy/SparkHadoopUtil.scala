@@ -29,19 +29,18 @@ import org.apache.spark.{Logging, SparkContext, SparkException}
 import scala.collection.JavaConversions._
 
 /**
- * Contains util methods to interact with Hadoop from Spark.
+ *
+ *包含Spark对Hadoop操作的一些方法
  */
 class SparkHadoopUtil extends Logging {
   val conf: Configuration = newConfiguration()
   UserGroupInformation.setConfiguration(conf)
 
   /**
-   * Runs the given function with a Hadoop UserGroupInformation as a thread local variable
-   * (distributed to child threads), used for authenticating HDFS and YARN calls.
+   * 运行给定的函数作为一个本地线程变量(分配给子线程),被用来进行HDFS和YARN验证
    *
-   * IMPORTANT NOTE: If this function is going to be called repeated in the same process
-   * you need to look https://issues.apache.org/jira/browse/HDFS-3545 and possibly
-   * do a FileSystem.closeAllForUGI in order to avoid leaking Filesystems
+   * 注意:如果这个函数在统一进程中重复使用,你需要看:https://issues.apache.org/jira/browse/HDFS-3545
+   * 可能执行FileSystem.closeAllForUGI避免文件系统溢出
    */
   def runAsSparkUser(func: () => Unit) {
     val user = Option(System.getenv("SPARK_USER")).getOrElse(SparkContext.SPARK_UNKNOWN_USER)
@@ -67,12 +66,14 @@ class SparkHadoopUtil extends Logging {
   /**
    * Return an appropriate (subclass) of Configuration. Creating config can initializes some Hadoop
    * subsystems.
+   *
+   * 返回一个合适的(子类)的配置.创建config来初始化hadoop的subsystems
    */
   def newConfiguration(): Configuration = new Configuration()
 
   /**
-   * Add any user credentials to the job conf which are necessary for running on a secure Hadoop
-   * cluster.
+   *添加一个用户可信认证给job是重要的,为了保护运行Hadoop集群
+   *
    */
   def addCredentials(conf: JobConf) {}
 

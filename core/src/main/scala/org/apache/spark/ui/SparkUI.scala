@@ -27,7 +27,8 @@ import org.apache.spark.ui.jobs.JobProgressTab
 import org.apache.spark.ui.storage.StorageTab
 
 /**
- * Top level user interface for a Spark application.
+ * Spark应用程序的最顶级接口
+ *
  */
 private[spark] class SparkUI(
     val sc: SparkContext,
@@ -51,15 +52,15 @@ private[spark] class SparkUI(
       basePath: String) =
     this(null, conf, securityManager, listenerBus, appName, basePath)
 
-  // If SparkContext is not provided, assume the associated application is not live
+  //如果SparkContext没有提供,那就认定程序没有启动
   val live = sc != null
 
-  // Maintain executor storage status through Spark events
+  //通过Spark的事件,保持executor的的storage状态
   val storageStatusListener = new StorageStatusListener
 
   initialize()
 
-  /** Initialize all components of the server. */
+  /** 初始化Server的所有组件 */
   def initialize() {
     listenerBus.addListener(storageStatusListener)
     val jobProgressTab = new JobProgressTab(this)
@@ -78,24 +79,24 @@ private[spark] class SparkUI(
 
   def getAppName = appName
 
-  /** Set the app name for this UI. */
+  /** 设置在UI上显示的app名字 */
   def setAppName(name: String) {
     appName = name
   }
 
-  /** Register the given listener with the listener bus. */
+  /** 注册listener bus.指定的监听器
+    * */
   def registerListener(listener: SparkListener) {
     listenerBus.addListener(listener)
   }
 
-  /** Stop the server behind this web interface. Only valid after bind(). */
+  /**停止server的web接口,直到在bind()方法执行的时候. */
   override def stop() {
     super.stop()
     logInfo("Stopped Spark web UI at %s".format(appUIAddress))
   }
 
-  /**
-   * Return the application UI host:port. This does not include the scheme (http://).
+  /**返回app的UI host:post.   这包括scheme(http://)
    */
   private[spark] def appUIHostPort = publicHostName + ":" + boundPort
 

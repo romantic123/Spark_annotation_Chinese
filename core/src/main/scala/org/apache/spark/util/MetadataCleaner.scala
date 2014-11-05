@@ -22,7 +22,7 @@ import java.util.{Timer, TimerTask}
 import org.apache.spark.{Logging, SparkConf}
 
 /**
- * Runs a timer task to periodically clean up metadata (e.g. old files or hashtable entries)
+ * 运行一个定时任务,清理metadata(例如旧文件或者hashtable entries)
  */
 private[spark] class MetadataCleaner(
     cleanerType: MetadataCleanerType.MetadataCleanerType,
@@ -72,7 +72,7 @@ private[spark] object MetadataCleanerType extends Enumeration {
 }
 
 // TODO: This mutates a Conf to set properties right now, which is kind of ugly when used in the
-// initialization of StreamingContext. It's okay for users trying to configure stuff themselves.
+// initialization of StreamingContext. It's okay for users trying to configure stuff themselve
 private[spark] object MetadataCleaner {
   def getDelaySeconds(conf: SparkConf) = {
     conf.getInt("spark.cleaner.ttl", -1)
@@ -92,10 +92,11 @@ private[spark] object MetadataCleaner {
   }
 
   /**
-   * Set the default delay time (in seconds).
-   * @param conf SparkConf instance
-   * @param delay default delay time to set
-   * @param resetAll whether to reset all to default
+   * 设置一个默认的延迟事件(s)
+   *
+   * 参数1_conf:SparkConf实例
+   * 参数2_delay:默认的延迟时间
+   * 参数3_resetAll:是否复位所有的默认值
    */
   def setDelaySeconds(conf: SparkConf, delay: Int, resetAll: Boolean = true) {
     conf.set("spark.cleaner.ttl", delay.toString)

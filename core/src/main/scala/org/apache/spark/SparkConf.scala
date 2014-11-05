@@ -21,28 +21,27 @@ import scala.collection.JavaConverters._
 import scala.collection.mutable.HashMap
 
 /**
- * Configuration for a Spark application. Used to set various Spark parameters as key-value pairs.
  *
- * Most of the time, you would create a SparkConf object with `new SparkConf()`, which will load
- * values from any `spark.*` Java system properties set in your application as well. In this case,
- * parameters you set directly on the `SparkConf` object take priority over system properties.
+ *Spark应用程序配置.常常使用k-v对设置Spark参数变量.
+ * 很多时候,你可以使用new SparkConf来创建一个SparkConf对象,他将读取各种spark的参数还有你应用程序中有关java的各种设置.
+ * 在这种情况下,你可以直接使用SparkConf对象进行设置
  *
- * For unit tests, you can also call `new SparkConf(false)` to skip loading external settings and
- * get the same configuration no matter what the system properties are.
+ * 在单元测试的时候,你可以使用`new SparkConf(false)`来跳过读取额外的配置和相同配置,不用管这些系统设置什么.
  *
- * All setter methods in this class support chaining. For example, you can write
+ * 所有的设置方法都支持链式设置,例如,你可以写成这样:
  * `new SparkConf().setMaster("local").setAppName("My app")`.
  *
- * Note that once a SparkConf object is passed to Spark, it is cloned and can no longer be modified
- * by the user. Spark does not support modifying the configuration at runtime.
+ * 注意:一旦SparkConf对象传递给Spark,因为传递过去的是副本,所以不能被用户再修改.Spark不支持在Spark运行的时候修改配置
+ * 文件.
+ * 参数1_loadDefaults:是否获取应用程序中java的设置.
  *
- * @param loadDefaults whether to also load values from Java system properties
+ *
  */
 class SparkConf(loadDefaults: Boolean) extends Cloneable with Logging {
 
   import SparkConf._
 
-  /** Create a SparkConf that loads defaults from system properties and the classpath */
+  /** 创建一个SparkConf对象,设置为true的意思是说,会读取Application中关于java的设置 */
   def this() = this(true)
 
   private[spark] val settings = new HashMap[String, String]()
@@ -54,7 +53,7 @@ class SparkConf(loadDefaults: Boolean) extends Cloneable with Logging {
     }
   }
 
-  /** Set a configuration variable. */
+  /**  设置一个配置变量 */
   def set(key: String, value: String): SparkConf = {
     if (key == null) {
       throw new NullPointerException("null key")
@@ -67,42 +66,44 @@ class SparkConf(loadDefaults: Boolean) extends Cloneable with Logging {
   }
 
   /**
-   * The master URL to connect to, such as "local" to run locally with one thread, "local[4]" to
-   * run locally with 4 cores, or "spark://master:7077" to run on a Spark standalone cluster.
+   * 设置master的url,可以是local,即本地线程,local[4]代表4个线程,也可以是 "spark://master:7077"这种形式,去运行一个
+   * spark standalone集群的方式
    */
   def setMaster(master: String): SparkConf = {
     set("spark.master", master)
   }
 
-  /** Set a name for your application. Shown in the Spark web UI. */
+  /**设置你app的名字,并且将显示在web ui上*/
   def setAppName(name: String): SparkConf = {
     set("spark.app.name", name)
   }
 
-  /** Set JAR files to distribute to the cluster. */
+  /**  设置jar文件给分布式集群  * */
   def setJars(jars: Seq[String]): SparkConf = {
     for (jar <- jars if (jar == null)) logWarning("null jar passed to SparkContext constructor")
     set("spark.jars", jars.filter(_ != null).mkString(","))
   }
 
-  /** Set JAR files to distribute to the cluster. (Java-friendly version.) */
+  /**  设置jar文件给分布式集群(java版本) */
   def setJars(jars: Array[String]): SparkConf = {
     setJars(jars.toSeq)
   }
 
   /**
-   * Set an environment variable to be used when launching executors for this application.
-   * These variables are stored as properties of the form spark.executorEnv.VAR_NAME
-   * (for example spark.executorEnv.PATH) but this method makes them easier to set.
+   * 设置一个环境变量,当executors对该application进行执行的时候会用到
+   * 这些变量被存储为spark.executorEnv.VAR_NAME的形式(例如spark.executorEnv.PATH),这个方法
+   * 在修改各种参数的时候会更容易.
+   *
    */
   def setExecutorEnv(variable: String, value: String): SparkConf = {
     set("spark.executorEnv." + variable, value)
   }
 
   /**
-   * Set multiple environment variables to be used when launching executors.
-   * These variables are stored as properties of the form spark.executorEnv.VAR_NAME
-   * (for example spark.executorEnv.PATH) but this method makes them easier to set.
+   * 设置一个环境变量,当executors对该application进行执行的时候会用到
+   * 这些变量被存储为spark.executorEnv.VAR_NAME的形式(例如spark.executorEnv.PATH),这个方法
+   * 在修改各种参数的时候会更容易.
+   *
    */
   def setExecutorEnv(variables: Seq[(String, String)]): SparkConf = {
     for ((k, v) <- variables) {
@@ -112,27 +113,25 @@ class SparkConf(loadDefaults: Boolean) extends Cloneable with Logging {
   }
 
   /**
-   * Set multiple environment variables to be used when launching executors.
+   * 设置一个环境变量,当executors对该application进行执行的时候会用到
    * (Java-friendly version.)
    */
   def setExecutorEnv(variables: Array[(String, String)]): SparkConf = {
     setExecutorEnv(variables.toSeq)
   }
 
-  /**
-   * Set the location where Spark is installed on worker nodes.
-   */
+  /** 设置Spark工作节点的位置*/
   def setSparkHome(home: String): SparkConf = {
     set("spark.home", home)
   }
 
-  /** Set multiple parameters together */
+  /** Set multiple parameters together  设置分布式的参数.... */
   def setAll(settings: Traversable[(String, String)]) = {
     this.settings ++= settings
     this
   }
 
-  /** Set a parameter if it isn't already configured */
+  /**  如果不存在配置就设置参数 */
   def setIfMissing(key: String, value: String): SparkConf = {
     if (!settings.contains(key)) {
       settings(key) = value
@@ -140,58 +139,58 @@ class SparkConf(loadDefaults: Boolean) extends Cloneable with Logging {
     this
   }
 
-  /** Remove a parameter from the configuration */
+  /** 从配置中删除一个参数 */
   def remove(key: String): SparkConf = {
     settings.remove(key)
     this
   }
-
-  /** Get a parameter; throws a NoSuchElementException if it's not set */
+4
+  /**得到一个参数,如果没有设置就抛出一个异常:NoSuchElementException*/
   def get(key: String): String = {
     settings.getOrElse(key, throw new NoSuchElementException(key))
   }
 
-  /** Get a parameter, falling back to a default if not set */
+  /**  得到一个参数,如果没有设置就返回默认*/
   def get(key: String, defaultValue: String): String = {
     settings.getOrElse(key, defaultValue)
   }
 
-  /** Get a parameter as an Option */
+  /**得到一个参数作以Option的方式*/
   def getOption(key: String): Option[String] = {
     settings.get(key)
   }
 
-  /** Get all parameters as a list of pairs */
+  /**  得到所有的参数以数组的方式*/
   def getAll: Array[(String, String)] = settings.clone().toArray
 
-  /** Get a parameter as an integer, falling back to a default if not set */
+  /**  得到一个为Integer形式的参数,没设置就返回默认*/
   def getInt(key: String, defaultValue: Int): Int = {
     getOption(key).map(_.toInt).getOrElse(defaultValue)
   }
 
-  /** Get a parameter as a long, falling back to a default if not set */
+  /** 得到一个为Long形式的参数,没设置就返回默认*/
   def getLong(key: String, defaultValue: Long): Long = {
     getOption(key).map(_.toLong).getOrElse(defaultValue)
   }
 
-  /** Get a parameter as a double, falling back to a default if not set */
+  /** 得到一个为Double形式的参数,没设置就返回默认 */
   def getDouble(key: String, defaultValue: Double): Double = {
     getOption(key).map(_.toDouble).getOrElse(defaultValue)
   }
 
-  /** Get a parameter as a boolean, falling back to a default if not set */
+  /** 得到一个为Boolean形式的参数,没设置就返回默认 */
   def getBoolean(key: String, defaultValue: Boolean): Boolean = {
     getOption(key).map(_.toBoolean).getOrElse(defaultValue)
   }
 
-  /** Get all executor environment variables set on this SparkConf */
+  /** 得到SparkConf对象中,所有executor的环境变量 */
   def getExecutorEnv: Seq[(String, String)] = {
     val prefix = "spark.executorEnv."
     getAll.filter{case (k, v) => k.startsWith(prefix)}
           .map{case (k, v) => (k.substring(prefix.length), v)}
   }
 
-  /** Get all akka conf variables set on this SparkConf */
+  /** 得到SparkConf对象中,所有akka的环境变量 */
   def getAkkaConf: Seq[(String, String)] =
     /* This is currently undocumented. If we want to make this public we should consider
      * nesting options under the spark namespace to avoid conflicts with user akka options.
@@ -199,25 +198,26 @@ class SparkConf(loadDefaults: Boolean) extends Cloneable with Logging {
      * spark's akka options.
      *
      *   E.g. spark.akka.option.x.y.x = "value"
+     *
      */
     getAll.filter { case (k, _) => isAkkaConf(k) }
 
-  /** Does the configuration contain a given parameter? */
+  /**判断配置中是否包含某个参数*/
   def contains(key: String): Boolean = settings.contains(key)
 
-  /** Copy this object */
+  /** 复制这个对象 */
   override def clone: SparkConf = {
     new SparkConf(false).setAll(settings)
   }
 
   /**
-   * By using this instead of System.getenv(), environment variables can be mocked
-   * in unit tests.
+   * 通过用这个方法,替代System.getenv(),环境变量在单元测试中会被屏蔽
    */
   private[spark] def getenv(name: String): String = System.getenv(name)
 
-  /** Checks for illegal or deprecated config settings. Throws an exception for the former. Not
-    * idempotent - may mutate this conf object to convert deprecated settings to supported ones. */
+  /** 检查非法或者不合理的配置.抛出异常.Not
+    * Not idempotent - may mutate this conf object to convert deprecated settings to supported ones.
+    * */
   private[spark] def validateSettings() {
     if (settings.contains("spark.local.dir")) {
       val msg = "In Spark 1.0 and later spark.local.dir will be overridden by the value set by " +
@@ -307,8 +307,7 @@ class SparkConf(loadDefaults: Boolean) extends Cloneable with Logging {
   }
 
   /**
-   * Return a string listing all keys and values, one per line. This is useful to print the
-   * configuration out for debugging.
+   *返回所有键和值的列表,每行一个.在调bug的时候,非常有用.
    */
   def toDebugString: String = {
     settings.toArray.sorted.map{case (k, v) => k + "=" + v}.mkString("\n")
@@ -317,16 +316,15 @@ class SparkConf(loadDefaults: Boolean) extends Cloneable with Logging {
 
 private[spark] object SparkConf {
   /**
-   * Return whether the given config is an akka config (e.g. akka.actor.provider).
-   * Note that this does not include spark-specific akka configs (e.g. spark.akka.timeout).
+   *判断是否是akka的配置(e.g. akka.actor.provider).
+   * 注意:不包括akka的特殊配置.(e.g. spark.akka.timeout).
+   * Note that this does not include spark-specific akka configs
    */
   def isAkkaConf(name: String): Boolean = name.startsWith("akka.")
 
   /**
-   * Return whether the given config should be passed to an executor on start-up.
-   *
-   * Certain akka and authentication configs are required of the executor when it connects to
-   * the scheduler, while the rest of the spark configs can be inherited from the driver later.
+   *判断是否是executor的启动的配置.
+   *当连接到scheduler(调度器)时,driver需要继承一些Spark的配置,此时需要某些akka的配置和认证.
    */
   def isExecutorStartupConf(name: String): Boolean = {
     isAkkaConf(name) ||
@@ -336,7 +334,7 @@ private[spark] object SparkConf {
   }
 
   /**
-   * Return whether the given config is a Spark port config.
+   * 判定指定的参数是否是Spark的端口配置
    */
   def isSparkPortConf(name: String): Boolean = name.startsWith("spark.") && name.endsWith(".port")
 }

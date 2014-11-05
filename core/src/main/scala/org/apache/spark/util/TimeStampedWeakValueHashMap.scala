@@ -26,18 +26,14 @@ import scala.language.implicitConversions
 import org.apache.spark.Logging
 
 /**
- * A wrapper of TimeStampedHashMap that ensures the values are weakly referenced and timestamped.
+ *对TimeStampedHashMap的封装,确保values是弱参照和时间戳
+ *如果该值是废弃的集合和弱引用是null,get()方法将返回一个不存在的value,这个类在map的periodically中是删除的,
+ * (每隔N次插入),作为他们的值不再是强引用.进一步来说,键-值对的时间戳是不是一个特定的阈值，
+ * 可以使用clearoldvalues方法删除旧的。
+ *TimeStampedWeakValueHashMap 是使用scala.collection.mutable.Map接口实现的,这使得他能被scala的HashMaps替换
+ *本质上,他使用了一个java的ConcurrentHashMap,所以所有的在HashMap上的操作是线程安全的.
  *
- * If the value is garbage collected and the weak reference is null, get() will return a
- * non-existent value. These entries are removed from the map periodically (every N inserts), as
- * their values are no longer strongly reachable. Further, key-value pairs whose timestamps are
- * older than a particular threshold can be removed using the clearOldValues method.
- *
- * TimeStampedWeakValueHashMap exposes a scala.collection.mutable.Map interface, which allows it
- * to be a drop-in replacement for Scala HashMaps. Internally, it uses a Java ConcurrentHashMap,
- * so all operations on this HashMap are thread-safe.
- *
- * @param updateTimeStampOnGet Whether timestamp of a pair will be updated when it is accessed.
+ * 参数1_updateTimeStampOnGet:当访问的时候更新timestamp对
  */
 private[spark] class TimeStampedWeakValueHashMap[A, B](updateTimeStampOnGet: Boolean = false)
   extends mutable.Map[A, B]() with Logging {
@@ -47,7 +43,9 @@ private[spark] class TimeStampedWeakValueHashMap[A, B](updateTimeStampOnGet: Boo
   private val internalMap = new TimeStampedHashMap[A, WeakReference[B]](updateTimeStampOnGet)
   private val insertCount = new AtomicInteger(0)
 
-  /** Return a map consisting only of entries whose values are still strongly reachable. */
+  /**
+    * 当entries的值是强引用额时候返回一个包含entries的map
+    * */
   private def nonNullReferenceMap = internalMap.filter { case (_, ref) => ref.get != null }
 
   def get(key: A): Option[B] = internalMap.get(key)
@@ -98,10 +96,14 @@ private[spark] class TimeStampedWeakValueHashMap[A, B](updateTimeStampOnGet: Boo
 
   def toMap: Map[A, B] = iterator.toMap
 
-  /** Remove old key-value pairs with timestamps earlier than `threshTime`. */
+  /**
+    * 删除时间戳比threshTime更早的k-v对
+    * */
   def clearOldValues(threshTime: Long) = internalMap.clearOldValues(threshTime)
 
-  /** Remove entries with values that are no longer strongly reachable. */
+  /**
+    * 删除有强引用值的entries
+    * */
   def clearNullValues() {
     val it = internalMap.getEntrySet.iterator
     while (it.hasNext) {
@@ -125,7 +127,7 @@ private[spark] class TimeStampedWeakValueHashMap[A, B](updateTimeStampOnGet: Boo
 }
 
 /**
- * Helper methods for converting to and from WeakReferences.
+ *弱引用的转换辅助方法
  */
 private object TimeStampedWeakValueHashMap {
 

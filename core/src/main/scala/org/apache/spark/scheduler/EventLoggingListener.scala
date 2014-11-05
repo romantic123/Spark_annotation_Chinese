@@ -32,14 +32,14 @@ import org.apache.spark.io.CompressionCodec
 import org.apache.spark.util.{FileLogger, JsonProtocol, Utils}
 
 /**
- * A SparkListener that logs events to persistent storage.
+ * 物化事件日志的Spark监听器
+ * Event Logging有一些特殊的配置参数
+ *   spark.eventLog.enabled:是否启用事件日志记录
+ *   spark.eventLog.compress:是否压缩事件日志
+ *   spark.eventLog.overwrite:是否覆写存在的文件
+ *   spark.eventLog.dir:事件日志的目录路径
+ *   spark.eventLog.buffer.kb:当写输出的时候缓冲区的大小
  *
- * Event logging is specified by the following configurable parameters:
- *   spark.eventLog.enabled - Whether event logging is enabled.
- *   spark.eventLog.compress - Whether to compress logged events
- *   spark.eventLog.overwrite - Whether to overwrite any existing files.
- *   spark.eventLog.dir - Path to the directory in which events are logged.
- *   spark.eventLog.buffer.kb - Buffer size to use when writing to output streams
  */
 private[spark] class EventLoggingListener(
     appName: String,
@@ -66,14 +66,15 @@ private[spark] class EventLoggingListener(
 
   /**
    * Return only the unique application directory without the base directory.
+   * 返回的unique的app目录,不包括基本目录
    */
   def getApplicationLogDir(): String = {
     name
   }
 
   /**
-   * Begin logging events.
-   * If compression is used, log a file that indicates which compression library is used.
+   * 开始事件日志.
+   * 如果compression启用了,日志文件要表明使用的压缩库.
    */
   def start() {
     logger.start()
@@ -87,7 +88,7 @@ private[spark] class EventLoggingListener(
     logger.newFile(LOG_PREFIX + logger.fileIndex)
   }
 
-  /** Log the event as JSON. */
+  /**记录事件,使用json的格式 */
   private def logEvent(event: SparkListenerEvent, flushLogger: Boolean = false) {
     val eventJson = JsonProtocol.sparkEventToJson(event)
     logger.logLine(compact(render(eventJson)))
@@ -99,7 +100,7 @@ private[spark] class EventLoggingListener(
     }
   }
 
-  // Events that do not trigger a flush
+  // 不触发刷新的event
   override def onStageSubmitted(event: SparkListenerStageSubmitted) =
     logEvent(event)
   override def onTaskStart(event: SparkListenerTaskStart) =
@@ -132,8 +133,7 @@ private[spark] class EventLoggingListener(
   override def onExecutorMetricsUpdate(event: SparkListenerExecutorMetricsUpdate) { }
 
   /**
-   * Stop logging events.
-   * In addition, create an empty special file to indicate application completion.
+   * 停止记录event,并且创建一个空文件指明app完成了
    */
   def stop() = {
     logger.newFile(APPLICATION_COMPLETE)
@@ -181,11 +181,9 @@ private[spark] object EventLoggingListener extends Logging {
   }
 
   /**
-   * Parse the event logging information associated with the logs in the given directory.
    *
-   * Specifically, this looks for event log files, the Spark version file, the compression
-   * codec file (if event logs are compressed), and the application completion file (if the
-   * application has run to completion).
+   * 解析给定目录下的日志信息
+   * 具体来说,事件日志文件,Spark的文件版本,压缩文件,应用程序完成的文件(如果应用程序完成了)
    */
   def parseLoggingInfo(logDir: Path, fileSystem: FileSystem): EventLoggingInfo = {
     try {
@@ -223,7 +221,7 @@ private[spark] object EventLoggingListener extends Logging {
   }
 
   /**
-   * Parse the event logging information associated with the logs in the given directory.
+   * 解析给定目录下的日志信息
    */
   def parseLoggingInfo(logDir: String, fileSystem: FileSystem): EventLoggingInfo = {
     parseLoggingInfo(new Path(logDir), fileSystem)
@@ -232,7 +230,7 @@ private[spark] object EventLoggingListener extends Logging {
 
 
 /**
- * Information needed to process the event logs associated with an application.
+ * 需要处理应用程序相关的事件日志信息
  */
 private[spark] case class EventLoggingInfo(
     logPaths: Seq[Path],

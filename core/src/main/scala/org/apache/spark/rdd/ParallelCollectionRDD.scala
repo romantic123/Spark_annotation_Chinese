@@ -52,8 +52,7 @@ private[spark] class ParallelCollectionPartition[T: ClassTag](
 
     val sfactory = SparkEnv.get.serializer
 
-    // Treat java serializer with default action rather than going thru serialization, to avoid a
-    // separate serialization header.
+    //java序列化是一个默认行为,避免仅仅序列化一个header
 
     sfactory match {
       case js: JavaSerializer => out.defaultWriteObject()
@@ -88,9 +87,8 @@ private[spark] class ParallelCollectionRDD[T: ClassTag](
     numSlices: Int,
     locationPrefs: Map[Int, Seq[String]])
     extends RDD[T](sc, Nil) {
-  // TODO: Right now, each split sends along its full data, even if later down the RDD chain it gets
-  // cached. It might be worthwhile to write the data to a file in the DFS and read it in the split
-  // instead.
+
+  //TODO:现在每个切片都会发送所有数据,即便之后RDD chain将被缓存,那也有必要将其将数据写入到文件而不是读取切片
   // UPDATE: A parallel collection can be checkpointed to HDFS, which achieves this goal.
 
   override def getPartitions: Array[Partition] = {
@@ -109,9 +107,8 @@ private[spark] class ParallelCollectionRDD[T: ClassTag](
 
 private object ParallelCollectionRDD {
   /**
-   * Slice a collection into numSlices sub-collections. One extra thing we do here is to treat Range
-   * collections specially, encoding the slices as other Ranges to minimize memory cost. This makes
-   * it efficient to run Spark over RDDs representing large sets of numbers.
+   *将一个集合切割成一定数量子集合.此外还会控制子集合数量,切片的编码,且将内存花费降到最低.这使得Spark在处理庞大数据上
+   * 极为高效
    */
   def slice[T: ClassTag](seq: Seq[T], numSlices: Int): Seq[Seq[T]] = {
     if (numSlices < 1) {
@@ -119,6 +116,7 @@ private object ParallelCollectionRDD {
     }
     // Sequences need to be sliced at the same set of index positions for operations
     // like RDD.zip() to behave as expected
+    //Sequences需要被切的时候要求操作符两边的变量要有相同的形式
     def positions(length: Long, numSlices: Int): Iterator[(Int, Int)] = {
       (0 until numSlices).iterator.map(i => {
         val start = ((i * length) / numSlices).toInt
@@ -154,7 +152,7 @@ private object ParallelCollectionRDD {
         slices
       }
       case _ => {
-        val array = seq.toArray // To prevent O(n^2) operations for List etc
+        val array = seq.toArray // 为了防止时间复杂度为O(n^2)的,比如list等
         positions(array.length, numSlices).map({
           case (start, end) =>
             array.slice(start, end).toSeq
