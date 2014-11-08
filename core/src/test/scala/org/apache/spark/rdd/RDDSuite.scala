@@ -29,7 +29,7 @@ import org.apache.spark.util.Utils
 
 import org.apache.spark.api.java.{JavaRDD, JavaSparkContext}
 import org.apache.spark.rdd.RDDSuiteUtils._
-
+/** 各种例子,好棒*/
 class RDDSuite extends FunSuite with SharedSparkContext {
 
   test("basic operations") {

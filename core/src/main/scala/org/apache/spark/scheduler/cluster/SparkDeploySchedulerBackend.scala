@@ -41,7 +41,7 @@ private[spark] class SparkDeploySchedulerBackend(
   override def start() {
     super.start()
 
-    // The endpoint for executors to talk to us
+    //executor告诉我们的endponit
     val driverUrl = "akka.tcp://%s@%s:%s/user/%s".format(
       SparkEnv.driverActorSystemName,
       conf.get("spark.driver.host"),
@@ -58,7 +58,7 @@ private[spark] class SparkDeploySchedulerBackend(
         cp.split(java.io.File.pathSeparator)
       }
 
-    // Start executors with a few necessary configs for registering with the scheduler
+    //executor开始注在scheduler上注册一些必要的配置
     val sparkJavaOpts = Utils.sparkJavaOpts(conf, SparkConf.isExecutorStartupConf)
     val javaOpts = sparkJavaOpts ++ extraJavaOpts
     val command = Command("org.apache.spark.executor.CoarseGrainedExecutorBackend",

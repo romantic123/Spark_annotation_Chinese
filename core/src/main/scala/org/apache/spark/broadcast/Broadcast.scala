@@ -24,17 +24,13 @@ import org.apache.spark.SparkException
 import scala.reflect.ClassTag
 
 /**
- * A broadcast variable. Broadcast variables allow the programmer to keep a read-only variable
- * cached on each machine rather than shipping a copy of it with tasks. They can be used, for
- * example, to give every node a copy of a large input dataset in an efficient manner. Spark also
- * attempts to distribute broadcast variables using efficient broadcast algorithms to reduce
- * communication cost.
  *
- * Broadcast variables are created from a variable `v` by calling
- * [[org.apache.spark.SparkContext#broadcast]].
- * The broadcast variable is a wrapper around `v`, and its value can be accessed by calling the
- * `value` method. The interpreter session below shows this:
+ * 一个广播变量.广播变量允许程序员定义一个只读的变量,缓存到每个机器中,而不是传输他的副本.很多地方可以使用他们:
+ * 例如,给每个节点一个大量数据集的副本,用于有效的管理.Spark也尝试有效的分发广播变量,减少通信花费.
  *
+ * 广播变量被变量v,通过调用[[org.apache.spark.SparkContext#broadcast]]后创建
+ *
+ * 这个广播变量封装v,可以通过调用'value'方法,来访问他的值,如同下面:
  * {{{
  * scala> val broadcastVar = sc.broadcast(Array(1, 2, 3))
  * broadcastVar: spark.Broadcast[Array[Int]] = spark.Broadcast(b5c40191-a864-4c7d-b9bf-d87e1a4e787c)
@@ -43,41 +39,42 @@ import scala.reflect.ClassTag
  * res0: Array[Int] = Array(1, 2, 3)
  * }}}
  *
- * After the broadcast variable is created, it should be used instead of the value `v` in any
- * functions run on the cluster so that `v` is not shipped to the nodes more than once.
- * In addition, the object `v` should not be modified after it is broadcast in order to ensure
- * that all nodes get the same value of the broadcast variable (e.g. if the variable is shipped
- * to a new node later).
+ *在广播变量创建以后,他应该被用来代替值`v`运行在集群中,这样,`v`就不要再发送给集群中的各个节点了
+ * 对象`v`应该不能修改,以便所有节点的广播变量都有相同的值
  *
- * @param id A unique identifier for the broadcast variable.
- * @tparam T Type of the data contained in the broadcast variable.
+ * 参数1_id:广播变量的唯一标识值
+ * 参数2_T:广播变量的data的类型
  */
 abstract class Broadcast[T: ClassTag](val id: Long) extends Serializable {
 
   /**
-   * Flag signifying whether the broadcast variable is valid
-   * (that is, not already destroyed) or not.
+   *
+   * flag代表广播变量是否是有效的
+   *
    */
   @volatile private var _isValid = true
 
-  /** Get the broadcasted value. */
+  /**得到广播变量的值*/
   def value: T = {
     assertValid()
     getValue()
   }
 
   /**
-   * Asynchronously delete cached copies of this broadcast on the executors.
-   * If the broadcast is used after this is called, it will need to be re-sent to each executor.
+   *
+   * 异步删除Executor上的广播副本.
+   * 这个广播在调用之后,将需要重新发给每个Executor
+   *
    */
   def unpersist() {
     unpersist(blocking = false)
   }
 
   /**
-   * Delete cached copies of this broadcast on the executors. If the broadcast is used after
-   * this is called, it will need to be re-sent to each executor.
-   * @param blocking Whether to block until unpersisting has completed
+   *
+   * 删除Executor上的广播变量副本.如果这个广播变量在调用之后被使用,他将重新发给每个Executor.
+   *
+   * 参数1_blocking:block的unpersisting过程是否已经完成.
    */
   def unpersist(blocking: Boolean) {
     assertValid()
@@ -85,8 +82,9 @@ abstract class Broadcast[T: ClassTag](val id: Long) extends Serializable {
   }
 
   /**
-   * Destroy all data and metadata related to this broadcast variable. Use this with caution;
-   * once a broadcast variable has been destroyed, it cannot be used again.
+   * 销毁和广播变量所有有关的data和metadata.
+   * 使用该方法要小心,因为一旦广播变量销毁了,就不能再用了
+   *
    */
   private[spark] def destroy(blocking: Boolean) {
     assertValid()
@@ -95,33 +93,33 @@ abstract class Broadcast[T: ClassTag](val id: Long) extends Serializable {
   }
 
   /**
-   * Whether this Broadcast is actually usable. This should be false once persisted state is
-   * removed from the driver.
+   *
+   * 这个广播变量是否实际可用.一旦持久化状态从driver中删除,就返回false
    */
   private[spark] def isValid: Boolean = {
     _isValid
   }
 
   /**
-   * Actually get the broadcasted value. Concrete implementations of Broadcast class must
-   * define their own way to get the value.
+   * 得到广播变量的值.广播的具体实现类必须定义得到值的方法.
+   *
    */
   protected def getValue(): T
 
   /**
-   * Actually unpersist the broadcasted value on the executors. Concrete implementations of
-   * Broadcast class must define their own logic to unpersist their own data.
+   * 在executors实际执行的unpersist的广播变量.广播的具体实现类必须定义他们自己的unpersist他们数据的方法
+   *
    */
   protected def doUnpersist(blocking: Boolean)
 
   /**
-   * Actually destroy all data and metadata related to this broadcast variable.
-   * Implementation of Broadcast class must define their own logic to destroy their own
-   * state.
+   * 销毁所有和广播变量有关的data和metadata的值.广播的具体实现类也必须定义销毁他们状态的方法
+   *
    */
   protected def doDestroy(blocking: Boolean)
 
-  /** Check if this broadcast is valid. If not valid, exception is thrown. */
+  /** 检查广播变量是否被验证,如果没有,抛出异常
+    * */
   protected def assertValid() {
     if (!_isValid) {
       throw new SparkException("Attempted to use %s after it has been destroyed!".format(toString))

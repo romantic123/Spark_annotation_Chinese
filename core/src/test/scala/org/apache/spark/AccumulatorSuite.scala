@@ -24,6 +24,8 @@ import org.scalatest.Matchers
 
 import org.apache.spark.SparkContext._
 
+
+/**各种例子,好棒*/
 class AccumulatorSuite extends FunSuite with Matchers with LocalSparkContext {
 
 

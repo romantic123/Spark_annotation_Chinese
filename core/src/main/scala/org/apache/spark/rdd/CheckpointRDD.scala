@@ -32,6 +32,7 @@ private[spark] class CheckpointRDDPartition(val index: Int) extends Partition {}
 
 /**
  * This RDD represents a RDD checkpoint file (similar to HadoopRDD).
+ * 这个RDD代表一个checjpoint文件(类似HadoopRDD)
  */
 private[spark]
 class CheckpointRDD[T: ClassTag](sc: SparkContext, val checkpointPath: String)
@@ -44,7 +45,7 @@ class CheckpointRDD[T: ClassTag](sc: SparkContext, val checkpointPath: String)
   override def getPartitions: Array[Partition] = {
     val cpath = new Path(checkpointPath)
     val numPartitions =
-    // listStatus can throw exception if path does not exist.
+    //如果路径不存在,listStatus就会抛出一个异常
     if (fs.exists(cpath)) {
       val dirContents = fs.listStatus(cpath).map(_.getPath)
       val partitionFiles = dirContents.filter(_.getName.startsWith("part-")).map(_.toString).sorted
@@ -106,7 +107,7 @@ private[spark] object CheckpointRDD extends Logging {
     val fileOutputStream = if (blockSize < 0) {
       fs.create(tempOutputPath, false, bufferSize)
     } else {
-      // This is mainly for testing purpose
+      //主要目的是用于测试
       fs.create(tempOutputPath, false, bufferSize, fs.getDefaultReplication, blockSize)
     }
     val serializer = env.serializer.newInstance()
@@ -146,9 +147,7 @@ private[spark] object CheckpointRDD extends Logging {
     deserializeStream.asIterator.asInstanceOf[Iterator[T]]
   }
 
-  // Test whether CheckpointRDD generate expected number of partitions despite
-  // each split file having multiple blocks. This needs to be run on a
-  // cluster (mesos or standalone) using HDFS.
+  //测试Checkpoint是否生成预期的partitions数量,尽管每个切片都有很多块.需要运行在集群中的HDFS上
   def main(args: Array[String]) {
     import org.apache.spark._
 

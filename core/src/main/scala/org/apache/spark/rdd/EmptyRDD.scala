@@ -22,7 +22,7 @@ import scala.reflect.ClassTag
 import org.apache.spark.{Partition, SparkContext, TaskContext}
 
 /**
- * An RDD that has no partitions and no elements.
+ * 一个没有partition和element的RDD
  */
 private[spark] class EmptyRDD[T: ClassTag](sc: SparkContext) extends RDD[T](sc, Nil) {
 

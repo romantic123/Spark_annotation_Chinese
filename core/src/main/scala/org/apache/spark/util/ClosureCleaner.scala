@@ -29,6 +29,8 @@ import org.apache.spark.{Logging, SparkEnv, SparkException}
 
 private[spark] object ClosureCleaner extends Logging {
   // Get an ASM class reader for a given class from the JAR that loaded it
+  //从jar中获取指定的ASM
+
   private def getClassReader(cls: Class[_]): ClassReader = {
     // Copy data over, before delegating to ClassReader - else we can run out of open file handles.
     val className = cls.getName.replaceFirst("^.*\\.", "") + ".class"

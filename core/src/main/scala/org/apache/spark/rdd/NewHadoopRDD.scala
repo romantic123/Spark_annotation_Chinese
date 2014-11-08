@@ -49,17 +49,14 @@ private[spark] class NewHadoopPartition(
 
 /**
  * :: DeveloperApi ::
- * An RDD that provides core functionality for reading data stored in Hadoop (e.g., files in HDFS,
- * sources in HBase, or S3), using the new MapReduce API (`org.apache.hadoop.mapreduce`).
+ * 为Hadoop提供了核心的方法(例如:读取HDFS上的文件,HBase上的文件,读取S3上的文件),使用的是new MapReduce API(`org.apache.hadoop.mapreduce`).
+ * 注意:直接实例化这个类并不推荐,请使用[[org.apache.spark.SparkContext.newAPIHadoopRDD()]]
  *
- * Note: Instantiating this class directly is not recommended, please use
- * [[org.apache.spark.SparkContext.newAPIHadoopRDD()]]
- *
- * @param sc The SparkContext to associate the RDD with.
- * @param inputFormatClass Storage format of the data to be read.
- * @param keyClass Class of the key associated with the inputFormatClass.
- * @param valueClass Class of the value associated with the inputFormatClass.
- * @param conf The Hadoop configuration.
+ * 参数1_sc:与RDD关联的那个SparkContext
+ * 参数2_inputFormatClass:读取数据的存储格式
+ * 参数3_keyClass:与inputFormatClass有关key的类
+ * 参数4_valueClass:与inputFormatClass有关的value的类
+ * 参数5_conf:Hadoop的配置
  */
 @DeveloperApi
 class NewHadoopRDD[K, V](
@@ -72,7 +69,7 @@ class NewHadoopRDD[K, V](
   with SparkHadoopMapReduceUtil
   with Logging {
 
-  // A Hadoop Configuration can be about 10 KB, which is pretty big, so broadcast it
+  //Hadoop的配置文件大约10kb,相当的大,所以要广播他
   private val confBroadcast = sc.broadcast(new SerializableWritable(conf))
   // private val serializableConf = new SerializableWritable(conf)
 
@@ -121,14 +118,15 @@ class NewHadoopRDD[K, V](
         /* bytesRead may not exactly equal the bytes read by a task: split boundaries aren't
          * always at record boundaries, so tasks may need to read into other splits to complete
          * a record. */
-        inputMetrics.bytesRead = split.serializableHadoopSplit.value.getLength()
+        /*bytesRead可能不总是等于从task读取的bytes,切割边界不总是记录边界,所以task可能需要从其他splits读取,完成record*/
+         inputMetrics.bytesRead = split.serializableHadoopSplit.value.getLength()
       } catch {
         case e: Exception =>
           logWarning("Unable to get input split size in order to set task input bytes", e)
       }
       context.taskMetrics.inputMetrics = Some(inputMetrics)
 
-      // Register an on-task-completion callback to close the input stream.
+      //注册一个任务完成后的回调函数,用以关闭输入流
       context.addTaskCompletionListener(context => close())
       var havePair = false
       var finished = false
@@ -160,7 +158,9 @@ class NewHadoopRDD[K, V](
     new InterruptibleIterator(context, iter)
   }
 
-  /** Maps over a partition, providing the InputSplit that was used as the base of the partition. */
+  /**
+    * 对一个partitions的map,使用的InputSplit作为partition的基础.
+    * */
   @DeveloperApi
   def mapPartitionsWithInputSplit[U: ClassTag](
       f: (InputSplit, Iterator[(K, V)]) => Iterator[U],
@@ -178,8 +178,8 @@ class NewHadoopRDD[K, V](
 
 private[spark] object NewHadoopRDD {
   /**
-   * Analogous to [[org.apache.spark.rdd.MapPartitionsRDD]], but passes in an InputSplit to
-   * the given function rather than the index of the partition.
+   * 类似[[org.apache.spark.rdd.MapPartitionsRDD]],但是通过InputSplit给一个函数,而不是partitions的索引
+   *
    */
   private[spark] class NewHadoopMapPartitionsWithSplitRDD[U: ClassTag, T: ClassTag](
       prev: RDD[T],

@@ -502,7 +502,7 @@ class SparkContext(config: SparkConf) extends Logging {
     val job = new NewHadoopJob(hadoopConfiguration)
     NewFileInputFormat.addInputPath(job, new Path(path))
     val updateConf = job.getConfiguration
-    new WholeTextFileRDD(
+    new WholeTextFileRDD(  /**调用NewHadoopRDD的WholeTextFileRDD,返回*/
       this,
       classOf[WholeTextFileInputFormat],
       classOf[String],
@@ -530,7 +530,7 @@ class SparkContext(config: SparkConf) extends Logging {
       valueClass: Class[V],
       minPartitions: Int = defaultMinPartitions
       ): RDD[(K, V)] = {
-    // Add necessary security credentials to the JobConf before broadcasting it.
+    //在广播他之前,增加安全验证
     SparkHadoopUtil.get.addCredentials(conf)
     new HadoopRDD(this, conf, inputFormatClass, keyClass, valueClass, minPartitions)
   }
@@ -689,8 +689,6 @@ class SparkContext(config: SparkConf) extends Logging {
    *
    * 载入一个RDD,保存为一个序列化对象的SequenceFile文件,该序列化对象包含一系列partition的NullWritable类型的key
    * 和BytesWritable类型的值的值
-   *
-   *
    */
   def objectFile[T: ClassTag](
       path: String,
@@ -782,7 +780,7 @@ class SparkContext(config: SparkConf) extends Logging {
     }
     addedFiles(key) = System.currentTimeMillis
 
-    // Fetch the file locally in case a job is executed using DAGScheduler.runLocally().
+    //执行的job使用DAGScdedule.runLocally()方法获取本地文件
     Utils.fetchFile(path, new File(SparkFiles.getRootDirectory()), conf, env.securityManager)
 
     logInfo("Added file " + path + " at " + key + " with timestamp " + addedFiles(key))
@@ -802,7 +800,7 @@ class SparkContext(config: SparkConf) extends Logging {
   def version = SparkContext.SPARK_VERSION
 
   /**
-   * 返回slave节点的缓存的最大可用内存和剩余可用内存缓存的map
+   * 返回以Map的形式,slave节点的缓存的最大可用内存和剩余可用内存缓存
    *
    */
   def getExecutorMemoryStatus: Map[String, (Long, Long)] = {
@@ -844,7 +842,6 @@ class SparkContext(config: SparkConf) extends Logging {
   @DeveloperApi
   def getAllPools: Seq[Schedulable] = {
     // TODO(xiajunluan): We should take nested pools into account
-    //我们应
     taskScheduler.rootPool.schedulableQueue.toSeq
   }
 
@@ -900,7 +897,6 @@ class SparkContext(config: SparkConf) extends Logging {
   }
 
   /**
-   * filesystems), an HTTP, HTTPS or FTP URI, or local:/path for a file on every worker node.
    * 增加一个jar依赖为在SparkContext上将被执行的所有任务.路径可以是,本地文件系统,HDFS,HTTP,HTTPS,FTP,或者
    * 每个工作节点的local:/path上的文件
    *
