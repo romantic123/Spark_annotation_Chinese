@@ -36,7 +36,7 @@ import org.apache.spark.util.{ActorLogReceive, Utils, AkkaUtils}
  * Interface allowing applications to speak with a Spark deploy cluster. Takes a master URL,
  * an app description, and a listener for cluster events, and calls back the listener when various
  * events occur.
- *
+ * AppClient是Application和Master交互的接口.
  * @param masterUrls Each url should look like spark://host:port.
  */
 private[spark] class AppClient(

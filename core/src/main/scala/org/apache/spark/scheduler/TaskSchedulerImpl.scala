@@ -44,7 +44,7 @@ import akka.actor.Props
  *
  * client端应该首先调用initialize()和start()方法,然后提交任务集合给runTasks()方法
  *
- * SAchedulerBackends和任务提交客户端都能够从多个线程中调用这个类,所以需要将其锁在公共API中维持他的状态.
+ * SchedulerBackends和任务提交客户端都能够从多个线程中调用这个类,所以需要将其锁在公共API中维持他的状态.
  * 此外,当他们想发送events的时候,需要SchedulerBackends同步他们自己,也就是锁定自己,所以我们必须保证,当我们在锁定自己状态
  * 的时候,不能锁定这个backend.
  *

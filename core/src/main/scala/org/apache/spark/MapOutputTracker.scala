@@ -388,6 +388,12 @@ private[spark] object MapOutputTracker {
    * Compress a size in bytes to 8 bits for efficient reporting of map output sizes.
    * We do this by encoding the log base 1.1 of the size as an integer, which can support
    * sizes up to 35 GB with at most 10% error.
+   *
+   * 如Array(0)=128就表示在data partition 0中有128byte数据。
+
+问题的问题是一个byte只能表示255，如果超过255怎么办呢？
+
+当当当，数学闪亮登场了，注意到compressSize没，通过转换将2^8变换为1.1^256。一下子由255byte延伸到近35G.
    */
   def compressSize(size: Long): Byte = {
     if (size == 0) {

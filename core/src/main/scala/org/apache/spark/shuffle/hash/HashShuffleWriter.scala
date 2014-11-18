@@ -48,7 +48,12 @@ private[spark] class HashShuffleWriter[K, V](
   private val shuffle = shuffleBlockManager.forMapTask(dep.shuffleId, mapId, numOutputSplits, ser,
     writeMetrics)
 
-  /** Write a bunch of records to this task's output */
+  /** Write a bunch of records to this task's output
+    *
+    * HashShuffleWriter.write中主要处理两件事
+
+判断是否需要进行聚合,比如<hello,1>和<hello,1>都要写入的话,那么先生成<hello,2>然后再进行后续的写入工作
+利用Partitioner函数来决定<k,val>写入到哪一个文件中*/
   override def write(records: Iterator[_ <: Product2[K, V]]): Unit = {
     val iter = if (dep.aggregator.isDefined) {
       if (dep.mapSideCombine) {
@@ -101,12 +106,17 @@ private[spark] class HashShuffleWriter[K, V](
     }
   }
 
+
+  /**
+   * 当所有的数据写入文件并提交以后，还需要生成MapStatus汇报给driver application.
+   * MapStatus在哪生成的呢？commitWritesAndBuildStatus就干这活
+    */
   private def commitWritesAndBuildStatus(): MapStatus = {
     // Commit the writes. Get the size of each bucket block (total block size).
     val compressedSizes = shuffle.writers.map { writer: BlockObjectWriter =>
       writer.commitAndClose()
       val size = writer.fileSegment().length
-      MapOutputTracker.compressSize(size)
+      MapOutputTracker.compressSize(size) //compressSize是一个byte数组，每一个byte反应了该partiton中的数据大小
     }
 
     new MapStatus(blockManager.blockManagerId, compressedSizes)

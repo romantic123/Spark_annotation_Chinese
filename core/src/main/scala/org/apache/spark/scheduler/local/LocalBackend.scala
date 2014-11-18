@@ -36,7 +36,8 @@ private case class KillTask(taskId: Long, interruptThread: Boolean)
 private case class StopExecutor()
 
 /**
- * 通过LocalActor调用LocalBackend.使用一个actor异步调用LocalBackend,在LocalBackend和TaskSchedulerImpl之间避免死锁.
+ * 通过LocalActor调用LocalBackend.使用一个actor异步调用LocalBackend,
+ * 在LocalBackend和TaskSchedulerImpl之间避免死锁.
  */
 private[spark] class LocalActor(
   scheduler: TaskSchedulerImpl,

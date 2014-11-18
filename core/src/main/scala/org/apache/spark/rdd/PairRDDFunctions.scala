@@ -69,11 +69,11 @@ class PairRDDFunctions[K, V](self: RDD[(K, V)])
    * In addition, users can control the partitioning of the output RDD, and whether to perform
    * map-side aggregation (if a mapper can produce multiple items with the same key).
    */
-  def combineByKey[C](createCombiner: V => C,
-      mergeValue: (C, V) => C,
-      mergeCombiners: (C, C) => C,
-      partitioner: Partitioner,
-      mapSideCombine: Boolean = true,
+  def combineByKey[C](createCombiner: V => C,//创建combiner,通过V的值创建C
+      mergeValue: (C, V) => C,//combiner已经创建C已经有一个值，把第二个的V叠加到C中，
+      mergeCombiners: (C, C) => C,//把两个C进行合并，其实就是两个value的合并。
+      partitioner: Partitioner,//Shuffle时需要的Partitioner
+      mapSideCombine: Boolean = true,//为了减小传输量,很多combine可以在map端先做,比如叠加,可以先在一个partition中把所有相同的key的value叠加,再shuffle
       serializer: Serializer = null): RDD[(K, C)] = {
     require(mergeCombiners != null, "mergeCombiners must be defined") // required as of Spark 0.9.0
     if (keyClass.isArray) {
@@ -85,11 +85,15 @@ class PairRDDFunctions[K, V](self: RDD[(K, V)])
       }
     }
     val aggregator = new Aggregator[K, V, C](createCombiner, mergeValue, mergeCombiners)
+    //如果RDD本身的partitioner与传入的partitioner相同，表示不需要进行shuffle
     if (self.partitioner == Some(partitioner)) {
+      //生成MapPartitionsRDD，直接在map端当前的partitioner下调用Aggregator.combineValuesByKey。
+      //把相同的key的value进行合并。
       self.mapPartitionsWithContext((context, iter) => {
         new InterruptibleIterator(context, aggregator.combineValuesByKey(iter, context))
       }, preservesPartitioning = true)
     } else {
+      //生成ShuffledRDD，进行shuffle操作，因为此时会生成ShuffleDependency,重新生成一个新的stage.
       new ShuffledRDD[K, V, C](self, partitioner)
         .setSerializer(serializer)
         .setAggregator(aggregator)
@@ -488,7 +492,6 @@ class PairRDDFunctions[K, V](self: RDD[(K, V)])
       }
     }
   }
-
   /**
    * Perform a right outer join of `this` and `other`. For each element (k, w) in `other`, the
    * resulting RDD will either contain all pairs (k, (Some(v), w)) for v in `this`, or the
